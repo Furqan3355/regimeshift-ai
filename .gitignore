@@ -24,3 +24,7 @@ real_features.json
 Thumbs.db
 output.txt
 task1.zip
+
+bot_state.json
+bot_state.json.tmp
+PROJECT_STATUS.txt

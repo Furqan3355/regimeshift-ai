@@ -13,7 +13,9 @@
 
 import http from "node:http";
 import fs from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { createHandlers } from "./lib.mjs";
+import { createBot } from "./bot.mjs";
 
 const env = process.env;
 if (!env.BINANCE_API_KEY || !env.BINANCE_API_SECRET) {
@@ -22,6 +24,9 @@ if (!env.BINANCE_API_KEY || !env.BINANCE_API_SECRET) {
 }
 
 const h = createHandlers({ env });
+// Autonomous paper bot: runs server-side, keeps going with the browser closed. BOT=off disables it.
+const bot = createBot({ handlers: h, statePath: fileURLToPath(new URL("./bot_state.json", import.meta.url)) });
+if (env.BOT !== "off") bot.start(Number(env.BOT_INTERVAL_MS || 5 * 60_000));
 const PORT = Number(env.PORT || 8787);
 const HOST = env.HOST || "127.0.0.1";
 
@@ -38,6 +43,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/prices") return send(200, await h.prices(parseTickers(url.searchParams.get("tickers"))));
     if (url.pathname === "/api/analysis") return send(200, await h.analysis(parseTickers(url.searchParams.get("ticker"))[0]));
     if (url.pathname === "/api/news") return send(200, await h.news(parseTickers(url.searchParams.get("ticker"))[0]));
+    if (url.pathname === "/api/bot") return send(200, bot.snapshot());
     if (url.pathname === "/" || url.pathname === "/index.html") {
       return send(200, await fs.readFile(new URL("./public/index.html", import.meta.url), "utf8"), "text/html; charset=utf-8");
     }
