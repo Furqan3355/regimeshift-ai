@@ -1,0 +1,24 @@
+# Secrets — NEVER commit these
+.env
+.env.local
+*.env
+regimeshiftagent/.studio/.env.local
+regimeshiftagent/.studio/wallets/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / TypeScript
+node_modules/
+regimeshiftagent/**/node_modules/
+dist/
+*.tsbuildinfo
+
+# Generated data (regenerable, keep repo lean — remove these two lines if you want them tracked)
+real_features.json
+
+# OS junk
+.DS_Store
+Thumbs.db

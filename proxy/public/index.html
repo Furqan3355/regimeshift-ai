@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RegimeShift</title>
+<style>
+:root{--ink:#141312;--ink2:#4a473f;--mut:#8a8677;--line:#e4e0d4;--bg:#faf8f2;--card:#fff;
+--calmbg:#e7f2ee;--calm:#2f6f5e;--midbg:#f6ead4;--mid:#a3691f;--hotbg:#f6e2dd;--hot:#a03a2e}
+@media (prefers-color-scheme:dark){:root{--ink:#eee9dd;--ink2:#c8c3b4;--mut:#8a8677;--line:#332f28;--bg:#161510;--card:#1e1c16;
+--calmbg:#1c2e28;--calm:#7fcbb3;--midbg:#332815;--mid:#e2ab5c;--hotbg:#3a201c;--hot:#e08a7c}}
+*{box-sizing:border-box}
+body{margin:0;padding:2rem 1.1rem 4rem;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system;
+padding-top:calc(2rem + env(safe-area-inset-top,0px))}
+.wrap{max-width:720px;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+.brand{display:flex;align-items:center;gap:8px}
+.brand .mark{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,var(--calm),var(--mid))}
+.brand b{font-size:14px}
+.live{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mut)}
+.live .dot{width:6px;height:6px;border-radius:50%;background:var(--calm);animation:pulse 1.8s ease-in-out infinite}
+.live.demo .dot{background:var(--mid);animation:none}
+.live.demo{color:var(--mid);font-weight:600}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.tabs{display:flex;gap:6px;margin-bottom:1.5rem;border-bottom:1px solid var(--line)}
+.tab{font-size:14px;font-weight:600;padding:10px 4px;background:none;border:none;color:var(--mut);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--ink);border-color:var(--ink)}
+.page{display:none}
+.page.active{display:block}
+h1{font-family:Georgia,'Iowan Old Style',serif;font-weight:400;font-size:22px;margin:0 0 1.25rem}
+
+.picker select{width:100%;font-size:16px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);margin-bottom:1.5rem}
+.hero{border-radius:16px;padding:26px 24px;margin-bottom:1.25rem;border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px -12px rgba(0,0,0,.12)}
+.hero.buy{background:var(--calmbg);border-color:var(--calm)}
+.hero.wait{background:var(--midbg);border-color:var(--mid)}
+.hero.skip{background:var(--hotbg);border-color:var(--hot)}
+.hero .verdict{font-family:Georgia,'Iowan Old Style',serif;font-size:22px;margin:0 0 8px;line-height:1.35}
+.hero.buy .verdict{color:var(--calm)} .hero.wait .verdict{color:var(--mid)} .hero.skip .verdict{color:var(--hot)}
+.hero .why{font-size:14px;color:var(--ink2);margin:0 0 14px;line-height:1.6}
+.hero ul{margin:0;padding-left:0;list-style:none}
+.hero li{font-size:13px;color:var(--ink2);padding:7px 0 7px 22px;position:relative;border-top:1px solid rgba(0,0,0,.06)}
+.hero li:first-child{border-top:none}
+.hero li:before{content:"•";position:absolute;left:6px}
+.action{margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,0,0,.08)}
+.buyBtn{font-size:14px;font-weight:600;padding:11px 20px;border-radius:9px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer;width:100%}
+.actionNote{font-size:12px;color:var(--ink2);margin:8px 0 0;text-align:center}
+
+.toggle{font-size:13px;color:var(--mut);background:none;border:none;cursor:pointer;padding:0;margin:0 0 1.25rem;text-decoration:underline;text-underline-offset:3px}
+.advanced{display:none;border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:var(--card);margin-bottom:1.25rem}
+.advanced.open{display:block}
+.line{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;gap:10px}
+.line:last-child{border-bottom:none}
+.line .k{color:var(--mut);white-space:nowrap}
+.newsBox{font-size:12px;line-height:1.6;padding:10px 0 0;color:var(--ink2)}
+.foot{font-size:12px;color:var(--mut);margin-top:1.5rem;line-height:1.7}
+code{font-family:ui-monospace,monospace;font-size:11px;background:var(--midbg);padding:1px 5px;border-radius:4px}
+
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem}
+@media(max-width:560px){.summary{grid-template-columns:1fr}}
+.sumCard{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--card)}
+.sumCard .lbl{font-size:11px;color:var(--mut);margin:0 0 4px}
+.sumCard .val{font-size:19px;font-weight:600;margin:0}
+.sumCard .val.up{color:var(--calm)} .sumCard .val.dn{color:var(--hot)}
+.market,.holdings,.log{border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:1.25rem;overflow:hidden}
+.market h2,.holdings h2,.log h2{font-size:13px;font-weight:600;color:var(--mut);padding:14px 16px 8px;margin:0}
+.tickRow{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--line);gap:8px;flex-wrap:wrap}
+.tickRow .sym{font-weight:600;font-size:13px;min-width:48px}
+.tickRow .px{font-size:14px;font-variant-numeric:tabular-nums;min-width:78px}
+.tickRow .chg{font-size:11px;font-variant-numeric:tabular-nums;min-width:58px}
+.chg.up{color:var(--calm)} .chg.dn{color:var(--hot)}
+.tickRow .btns{display:flex;gap:6px;margin-left:auto}
+.tbtn{font-size:11px;font-weight:600;padding:6px 12px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.tbtn.buy{border-color:var(--calm);color:var(--calm)} .tbtn.sell{border-color:var(--hot);color:var(--hot)}
+.tbtn:disabled{opacity:.35;cursor:not-allowed}
+.hRow{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-top:1px solid var(--line);font-size:13px}
+.hRow .meta{color:var(--mut);font-size:11px;display:block;margin-top:2px}
+.logRow{padding:9px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--ink2);display:flex;justify-content:space-between}
+.logRow .t{color:var(--mut)}
+.empty{font-size:13px;color:var(--mut);text-align:center;padding:18px}
+.resetBtn{font-size:12px;color:var(--mut);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="topbar">
+  <div class="brand"><span class="mark"></span><b>RegimeShift</b></div>
+  <div class="live demo" id="liveBox"><span class="dot"></span><span id="liveText">live · updated just now</span></div>
+</div>
+<div class="tabs">
+  <button class="tab active" id="tabAdvisorBtn" onclick="showTab('advisor')">Advisor</button>
+  <button class="tab" id="tabPaperBtn" onclick="showTab('paper')">Paper Trading</button>
+</div>
+
+<!-- ===== ADVISOR PAGE ===== -->
+<div class="page active" id="pageAdvisor">
+  <h1>Should I buy this stock right now?</h1>
+  <div class="picker"><select id="ticker" onchange="runAdvisor()"></select></div>
+  <div id="heroBox"></div>
+  <button class="toggle" onclick="toggleAdv()" id="advToggle">Show the technical details ▾</button>
+  <div class="advanced" id="advPanel">
+    <div id="advLines"></div>
+    <div class="newsBox" id="newsLines"></div>
+  </div>
+  <p class="foot">Data source is shown top-right: <b>LIVE</b> = real prices, candles and headlines pulled from Binance's RWA Data API through the local proxy; <b>DEMO</b> = built-in illustrative numbers. The regime model is trained on 3,795 real daily samples across 58 tokenized stocks. In demo data, <code>NFLX</code> shows the system catching a real pricing-data glitch instead of trusting it blindly.</p>
+</div>
+
+<!-- ===== PAPER TRADING PAGE ===== -->
+<div class="page" id="pagePaper">
+  <h1>Practice trading with fake money first</h1>
+  <div class="summary">
+    <div class="sumCard"><p class="lbl">Cash</p><p class="val" id="cashVal">$0</p></div>
+    <div class="sumCard"><p class="lbl">Holdings value</p><p class="val" id="holdVal">$0</p></div>
+    <div class="sumCard"><p class="lbl">Total P&L</p><p class="val" id="pnlVal">$0</p></div>
+  </div>
+  <div class="market"><h2 id="mktTitle">Market</h2><div id="marketBox"></div></div>
+  <div class="holdings"><h2>Your positions</h2><div id="holdingsBox"></div></div>
+  <div class="log"><h2>Trade history</h2><div id="logBox"></div></div>
+  <button class="resetBtn" onclick="resetPortfolio()">Reset account to $10,000</button>
+  <p class="foot">Same portfolio as the "Buy" button on the Advisor tab — one shared paper account. In LIVE mode prices are the real on-chain token prices, refreshed every 10 s; in DEMO mode they random-walk. No wallet needed here. When you're ready to trade for real, use "Connect wallet" on the Advisor tab instead.</p>
+</div>
+</div>
+
+<script>
+// ============ SHARED: ticker data (regime + TA + news + live sim base price) ============
+const DEMO = {
+  NVDA:{ret:0.3, vol:1.9, onp:118.96, refp:118.96, mkt:'regular', ta:{trend:'uptrend',rsi:58,sma:117.80,low:114.20}, news:'Nvidia data-center demand remains strong into next quarter | Analysts raise price targets on AI chip orders'},
+  AAPL:{ret:0.1, vol:1.4, onp:232.10, refp:232.10, mkt:'regular', ta:{trend:'sideways',rsi:51,sma:231.40,low:226.80}, news:'Apple services revenue steady, hardware growth modest | No major catalysts this week'},
+  MSFT:{ret:0.05, vol:1.2, onp:441.30, refp:441.30, mkt:'closed', ta:{trend:'sideways',rsi:50,sma:440.90,low:433.10}, news:'Quiet news cycle for Microsoft this week'},
+  GOOGL:{ret:0.2, vol:1.6, onp:172.40, refp:172.40, mkt:'regular', ta:{trend:'uptrend',rsi:56,sma:170.10,low:165.90}, news:'Google Cloud growth beats expectations | Search ad revenue stable'},
+  AMZN:{ret:-0.1, vol:1.8, onp:214.30, refp:213.80, mkt:'regular', ta:{trend:'sideways',rsi:49,sma:215.00,low:207.60}, news:'AWS margins in focus ahead of earnings'},
+  META:{ret:0.4, vol:2.1, onp:612.50, refp:612.50, mkt:'regular', ta:{trend:'uptrend',rsi:61,sma:601.20,low:585.40}, news:'Meta ad pricing firms up | AI infrastructure spend under scrutiny'},
+  TSLA:{ret:-0.6, vol:4.3, onp:248.55, refp:246.90, mkt:'regular', ta:{trend:'downtrend',rsi:38,sma:252.10,low:241.30}, news:'Tesla delivery numbers below estimates | Price cuts reported in key markets'},
+  AMD:{ret:0.5, vol:2.7, onp:161.20, refp:161.20, mkt:'regular', ta:{trend:'uptrend',rsi:60,sma:157.40,low:150.10}, news:'AMD data-center chip roadmap well received'},
+  COIN:{ret:1.2, vol:6.8, onp:305.40, refp:304.10, mkt:'regular', ta:{trend:'uptrend',rsi:63,sma:288.90,low:271.20}, news:'Coinbase trading volumes climb with crypto rally'},
+  MARA:{ret:1.8, vol:9.5, onp:12.52, refp:12.50, mkt:'offhours', ta:{trend:'uptrend',rsi:64,sma:11.90,low:10.85}, news:'Bitcoin miners rally as BTC price recovers'},
+  SOXL:{ret:-2.1, vol:11.8, onp:31.20, refp:31.40, mkt:'regular', ta:{trend:'downtrend',rsi:29,sma:33.60,low:29.80}, news:'Semiconductor sector under pressure amid export-rule uncertainty'},
+  TQQQ:{ret:0.9, vol:5.4, onp:88.40, refp:88.40, mkt:'regular', ta:{trend:'uptrend',rsi:59,sma:85.10,low:80.30}, news:'Tech-heavy rally lifts leveraged Nasdaq funds'},
+  PYPL:{ret:0.1, vol:1.9, onp:78.20, refp:78.20, mkt:'closed', ta:{trend:'sideways',rsi:48,sma:78.60,low:74.90}, news:'PayPal checkout volumes flat this quarter'},
+  ABNB:{ret:-0.4, vol:2.6, onp:132.10, refp:131.50, mkt:'regular', ta:{trend:'downtrend',rsi:42,sma:135.80,low:127.30}, news:'Airbnb booking growth slows in key markets'},
+  NFLX:{ret:0.2, vol:2.0, onp:7116.50, refp:711.65, mkt:'regular', ta:{trend:'sideways',rsi:53,sma:708.20,low:695.40}, news:'Netflix subscriber growth in line with expectations'},
+};
+
+// ============ TABS ============
+function showTab(which){
+  document.getElementById('pageAdvisor').classList.toggle('active', which==='advisor');
+  document.getElementById('pagePaper').classList.toggle('active', which==='paper');
+  document.getElementById('tabAdvisorBtn').classList.toggle('active', which==='advisor');
+  document.getElementById('tabPaperBtn').classList.toggle('active', which==='paper');
+  if(which==='paper') renderPaperAll();
+}
+
+// ============ GMM regime model (real fitted params) ============
+const GMM = { weights:[0.457,0.406,0.137], means:[[-0.004,1.866],[-0.233,5.049],[-0.416,12.219]],
+  covariances:[[[2.189,-0.0002],[-0.0002,0.733]],[[23.021,-0.623],[-0.623,3.391]],[[196.574,-8.457],[-8.457,17.890]]],
+  labels:['Risk-On','Defensive','Crisis'] };
+function inv2(m){const[[a,b],[c,d]]=m,det=a*d-b*c;return{inv:[[d/det,-b/det],[-c/det,a/det]],det}}
+function logMvn(x,mean,cov){const{inv,det}=inv2(cov),dx=[x[0]-mean[0],x[1]-mean[1]];
+  const q=dx[0]*(inv[0][0]*dx[0]+inv[0][1]*dx[1])+dx[1]*(inv[1][0]*dx[0]+inv[1][1]*dx[1]);
+  return -0.5*(2*Math.log(2*Math.PI)+Math.log(det)+q)}
+function predict(x){const lw=GMM.weights.map((w,i)=>Math.log(w)+logMvn(x,GMM.means[i],GMM.covariances[i]));
+  const mx=Math.max(...lw),s=lw.reduce((a,l)=>a+Math.exp(l-mx),0),ln=mx+Math.log(s);
+  const p=lw.map(l=>Math.exp(l-ln));let best=0;p.forEach((v,i)=>{if(v>p[best])best=i});
+  return{regime:GMM.labels[best],conf:Math.round(p[best]*10000)/10000}}
+const SUS=[2,4,5,10,15],TOL=.02;
+function isAnomalous(a,b){const r=a/b;for(const s of SUS)for(const c of[s,1/s])if(Math.abs(r-c)/c<=TOL)return true;return false}
+const OFFHOURS={regular:{m:1,s:.5,label:'market open'},offhours:{m:.3,s:1.5,label:'outside regular hours'},closed:{m:0,s:null,label:'market closed'}};
+const PLAIN_REGIME={'Risk-On':'the broader mood is calm and confident','Defensive':'markets are a bit choppy right now','Crisis':'markets are turbulent right now'};
+function entrySuggestion(d){
+  const extPct = ((d.onp - d.ta.sma) / d.ta.sma) * 100;
+  if(extPct <= 2) return { price: d.onp, note: `Price is already near its 20-day average ($${d.ta.sma}) — this level is a reasonable long-term entry, not a chase.` };
+  return { price: d.ta.sma, note: `Price has run ${extPct.toFixed(1)}% above its 20-day average — for a long-term entry, waiting for a pullback toward ~$${d.ta.sma} (or the recent low, $${d.ta.low}) avoids buying the top.` };
+}
+
+// ============ LIVE DATA LAYER (auto-detects the local proxy; falls back to DEMO) ============
+const LIVE = {on:false, prices:{}, analysis:{}, news:{}, started:false};
+async function api(path){ const r=await fetch(path,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+async function detectLive(){
+  try{ const j=await api('/api/prices?tickers='+Object.keys(DEMO).join(',')); if(j&&j.prices){ LIVE.on=true; applyLivePrices(j); } }
+  catch{ LIVE.on=false; }
+}
+function applyLivePrices(j){
+  LIVE.prices=j.prices; lastUpdate=Date.now();
+  for(const sym in j.prices){ const p=j.prices[sym];
+    if(p&&p.onp){ prices[sym]=p.onp; if(!LIVE.started) startPrices[sym]=p.onp; } }
+  LIVE.started=true;
+}
+async function pollLive(){
+  if(!LIVE.on) return;
+  try{ applyLivePrices(await api('/api/prices?tickers='+Object.keys(DEMO).join(','))); }catch{}
+  if(document.getElementById('pagePaper').classList.contains('active')) renderPaperAll();
+}
+function mapStatus(s){
+  s=(s||'').toLowerCase();
+  if(s==='regular'||s==='open') return 'regular';
+  if(['premarket','postmarket','overnight','offhours','extended'].includes(s)) return 'offhours';
+  return 'closed'; // closed / pause / anything unknown -> the safe default (no trading)
+}
+async function getD(ticker){
+  if(!LIVE.on) return DEMO[ticker];
+  const p=LIVE.prices[ticker]; if(!p||!p.onp) return null;
+  let a=LIVE.analysis[ticker];
+  if(!a||Date.now()-a.at>300000){ try{ a=await api('/api/analysis?ticker='+ticker); a.at=Date.now(); LIVE.analysis[ticker]=a; }catch{ a=null; } }
+  if(!a||a.ret==null) return null;
+  let n=LIVE.news[ticker];
+  if(!n){ try{ n=await api('/api/news?ticker='+ticker); LIVE.news[ticker]=n; }catch{ n={news:null}; } }
+  return {ret:a.ret, vol:a.vol, onp:p.onp, refp:p.refp, mkt:mapStatus(p.marketStatus),
+          ta:{trend:a.ta.trend, rsi:a.ta.rsi==null?'n/a':a.ta.rsi, sma:a.ta.sma, low:a.ta.low},
+          news:n.news||'No recent headlines (or FINNHUB_API_KEY is not set on the proxy).'};
+}
+
+// ============ ADVISOR TAB ============
+function toggleAdv(){
+  const p=document.getElementById('advPanel'),b=document.getElementById('advToggle');
+  const open=p.classList.toggle('open');
+  b.textContent=open?'Hide the technical details ▲':'Show the technical details ▾';
+}
+async function runAdvisor(){
+  const ticker=document.getElementById('ticker').value;
+  if(LIVE.on) document.getElementById('heroBox').innerHTML=`<div class="hero wait"><p class="verdict">Loading live data for ${ticker}…</p></div>`;
+  const d=await getD(ticker);
+  if(ticker!==document.getElementById('ticker').value) return; // user switched while loading
+  if(!d){
+    document.getElementById('heroBox').innerHTML=`<div class="hero wait"><p class="verdict">No usable live data for ${ticker}</p><p class="why">The API returned no price, or not enough candle history, for this ticker right now. Try another ticker.</p></div>`;
+    return;
+  }
+  const spreadPct=Math.round(((d.onp-d.refp)/d.refp)*10000)/100;
+  const anomalous=isAnomalous(d.onp,d.refp);
+  const reg=predict([d.ret,d.vol]);
+  const hrs=OFFHOURS[d.mkt];
+  const efficient=!anomalous && Math.abs(spreadPct)<=1.0;
+  const shouldTrade=efficient && hrs.m>0;
+
+  let mood, verdict, why, reasons=[];
+  if(anomalous){
+    mood='skip'; verdict=`Hold off on ${ticker} — the price data looks broken`;
+    why=`${ticker}'s on-chain price and its real-world reference price don't line up — off by a suspiciously round multiple, which usually means a data glitch, not a real market move.`;
+    reasons=[`On-chain price: $${d.onp.toLocaleString()}`,`Reference price: $${d.refp.toLocaleString()}`,`This gap isn't a real trading opportunity, it's noise`];
+  } else if(hrs.m===0){
+    mood='wait'; verdict=`${ticker}'s market is closed right now`;
+    why=`Trading outside real market hours carries more risk with less benefit, so we sit this one out until it reopens.`;
+    reasons=[`Status: ${hrs.label}`,`No position size is considered safe to open here`];
+  } else if(!efficient){
+    mood='wait'; verdict=`Wait on ${ticker} — the entry price isn't great right now`;
+    why=`The gap between on-chain and fair reference price is wider than usual (${spreadPct}%), so buying now costs more than it should.`;
+    reasons=[`Spread: ${spreadPct}%`,`Our comfort threshold is ±1%`];
+  } else {
+    mood='buy'; const entry=entrySuggestion(d);
+    verdict=`Looks like a reasonable time to consider ${ticker}`;
+    why=`Pricing is clean, ${PLAIN_REGIME[reg.regime]}, and entry cost is low. Position size scaled to ${hrs.m*100}% because ${hrs.label}.`;
+    reasons=[`<b>Suggested entry: $${entry.price.toLocaleString()}</b> — ${entry.note}`,`Price match: within ${Math.abs(spreadPct)}% of reference`,`Market mood: ${reg.regime} (${Math.round(reg.conf*100)}% confident)`,`Suggested size: ${hrs.m*100}% of a normal position`];
+  }
+
+  document.getElementById('heroBox').innerHTML=`
+    <div class="hero ${mood}">
+      <p class="verdict">${verdict}</p>
+      <p class="why">${why}</p>
+      <ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+      ${mood==='buy' ? `<div class="action" id="actionBox">
+        <button class="buyBtn" onclick="realConnect('${ticker}')" id="connectBtn">Connect wallet</button>
+        <p class="actionNote" id="walletNote">Uses your own MetaMask / Trust Wallet / Binance Wallet. Or skip straight to <a href="#" onclick="showTab('paper');return false">Paper Trading</a> to practice without a wallet.</p>
+      </div>` : ''}
+    </div>`;
+
+  const entryLine = mood==='buy' ? entrySuggestion(d).price : null;
+  document.getElementById('advLines').innerHTML=`
+    <div class="line"><span class="k">Regime</span><span>${reg.regime} · ${Math.round(reg.conf*1000)/10}% confidence</span></div>
+    <div class="line"><span class="k">Spread</span><span>${spreadPct}% ${anomalous?'(anomalous)':''}</span></div>
+    <div class="line"><span class="k">Entry gate</span><span>${efficient?'passed':'rejected'}</span></div>
+    <div class="line"><span class="k">Off-hours sizing</span><span>${hrs.m*100}%${hrs.s!=null?' · slip tol '+hrs.s+'%':''}</span></div>
+    <div class="line"><span class="k">Trend / RSI</span><span>${d.ta.trend} · RSI ${d.ta.rsi} · 20d avg $${d.ta.sma}</span></div>
+    <div class="line"><span class="k">Should trade</span><span>${shouldTrade?'yes':'no'}</span></div>`;
+  document.getElementById('newsLines').innerHTML = `<b>Recent headlines:</b> ${d.news}`;
+}
+
+const BSC_CHAIN_ID='0x38'; let connectedAddress=null;
+async function realConnect(ticker){
+  const note=document.getElementById('walletNote'), btn=document.getElementById('connectBtn');
+  if(typeof window.ethereum==='undefined'){
+    note.innerHTML=`No wallet extension found. Install <a href="https://metamask.io" target="_blank" rel="noopener">MetaMask</a>, then reload. Or use <a href="#" onclick="showTab('paper');return false">Paper Trading</a> to practice without one.`;
+    return;
+  }
+  try{
+    btn.textContent='Connecting…';
+    const accounts=await window.ethereum.request({method:'eth_requestAccounts'});
+    connectedAddress=accounts[0];
+    try{ await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:BSC_CHAIN_ID}]}); }
+    catch(e){ if(e.code===4902){ await window.ethereum.request({method:'wallet_addEthereumChain',params:[{chainId:BSC_CHAIN_ID,chainName:'BNB Smart Chain',nativeCurrency:{name:'BNB',symbol:'BNB',decimals:18},rpcUrls:['https://bsc-dataseed.binance.org/'],blockExplorerUrls:['https://bscscan.com']}]}); } else throw e; }
+    const balHex=await window.ethereum.request({method:'eth_getBalance',params:[connectedAddress,'latest']});
+    const bnb=(parseInt(balHex,16)/1e18).toFixed(4);
+    const short=connectedAddress.slice(0,6)+'…'+connectedAddress.slice(-4);
+    btn.outerHTML=`<button class="buyBtn" onclick="openPancakeSwap('${ticker}')">Buy ${ticker} on PancakeSwap</button>`;
+    document.getElementById('walletNote').innerHTML=`Connected: <code>${short}</code> · ${bnb} BNB on BSC mainnet. RegimeShift never holds your funds.`;
+  }catch(err){
+    btn.textContent='Connect wallet';
+    note.textContent = err.code===4001 ? 'Connection rejected in wallet.' : ('Could not connect: '+(err.message||err));
+  }
+}
+function openPancakeSwap(ticker){
+  buy(ticker, 50); // records into the SAME paper portfolio as the Paper Trading tab
+  window.open('https://pancakeswap.finance/swap?chain=bsc','_blank','noopener');
+}
+
+let lastUpdate=Date.now();
+function tickLiveClock(){
+  const box=document.getElementById('liveBox'), txt=document.getElementById('liveText');
+  box.classList.toggle('demo', !LIVE.on);
+  if(!LIVE.on){ txt.textContent='DEMO DATA · simulated, not live'; return; }
+  const secs=Math.round((Date.now()-lastUpdate)/1000);
+  txt.textContent = secs<2?'LIVE · Binance RWA API · just now':`LIVE · Binance RWA API · ${secs}s ago`;
+}
+setInterval(tickLiveClock,1000);
+
+// ============ PAPER TRADING (shared portfolio) ============
+const START_CASH=10000, STATE_KEY='regimeshift_papertrade_v2';
+let prices={}, startPrices={}, holdings={}, cash=START_CASH, tradeLog=[];
+
+function loadState(){
+  try{ const raw=localStorage.getItem(STATE_KEY);
+    if(raw){ const s=JSON.parse(raw); cash=s.cash; holdings=s.holdings; tradeLog=s.log||[]; }
+    else { cash=START_CASH; holdings={}; tradeLog=[]; }
+  }catch{ cash=START_CASH; holdings={}; tradeLog=[]; }
+}
+function saveState(){ try{ localStorage.setItem(STATE_KEY, JSON.stringify({cash,holdings,log:tradeLog})); }catch{} }
+function resetPortfolio(){ try{ localStorage.removeItem(STATE_KEY); }catch{} loadState(); renderPaperAll(); }
+
+function initPrices(){ for(const sym in DEMO){ prices[sym]=DEMO[sym].onp; startPrices[sym]=DEMO[sym].onp; } }
+function tickPrices(){
+  if(LIVE.on) return;
+  for(const sym in prices){ const drift=(Math.random()-0.5)*0.006; prices[sym]=Math.max(0.01,prices[sym]*(1+drift)); }
+  if(document.getElementById('pagePaper').classList.contains('active')) renderPaperAll();
+}
+function buy(sym, usd){
+  if(cash<usd) return;
+  const px=prices[sym], qty=usd/px, pos=holdings[sym]||{qty:0,costBasis:0};
+  pos.costBasis+=usd; pos.qty+=qty; holdings[sym]=pos; cash-=usd;
+  tradeLog.unshift({t:new Date().toLocaleTimeString(), text:`Bought $${usd} of ${sym} @ $${px.toFixed(2)}`});
+  saveState();
+  if(document.getElementById('pagePaper').classList.contains('active')) renderPaperAll();
+}
+function sell(sym){
+  const pos=holdings[sym]; if(!pos||pos.qty<=0) return;
+  const px=prices[sym], proceeds=pos.qty*px;
+  cash+=proceeds;
+  tradeLog.unshift({t:new Date().toLocaleTimeString(), text:`Sold all ${sym} for $${proceeds.toFixed(2)}`});
+  delete holdings[sym]; saveState(); renderPaperAll();
+}
+function renderMarket(){
+  document.getElementById('mktTitle').textContent = LIVE.on ? 'Live market — real on-chain prices, refreshed every 10s (change = since you opened this page)' : 'Demo market — simulated prices';
+  document.getElementById('marketBox').innerHTML = Object.keys(DEMO).map(sym=>{
+    const px=prices[sym], chgPct=((px-startPrices[sym])/startPrices[sym])*100, up=chgPct>=0;
+    const hasPos = holdings[sym] && holdings[sym].qty>0;
+    return `<div class="tickRow"><span class="sym">${sym}</span><span class="px">$${px.toFixed(2)}</span>
+      <span class="chg ${up?'up':'dn'}">${up?'+':''}${chgPct.toFixed(2)}%</span>
+      <span class="btns"><button class="tbtn buy" onclick="buy('${sym}',50)" ${cash<50?'disabled':''}>Buy $50</button>
+      <button class="tbtn sell" onclick="sell('${sym}')" ${hasPos?'':'disabled'}>Sell all</button></span></div>`;
+  }).join('');
+}
+function renderHoldings(){
+  const entries=Object.entries(holdings).filter(([,p])=>p.qty>0);
+  const box=document.getElementById('holdingsBox');
+  if(!entries.length){ box.innerHTML=`<p class="empty">No positions yet — buy something above, or from the Advisor tab.</p>`; return; }
+  box.innerHTML = entries.map(([sym,pos])=>{
+    const val=pos.qty*prices[sym], pnl=val-pos.costBasis, pnlPct=(pnl/pos.costBasis)*100, up=pnl>=0;
+    return `<div class="hRow"><span><b>${sym}</b><span class="meta">${pos.qty.toFixed(4)} units · cost $${pos.costBasis.toFixed(2)}</span></span>
+      <span style="color:${up?'var(--calm)':'var(--hot)'};font-weight:600">${up?'+':''}$${pnl.toFixed(2)} (${up?'+':''}${pnlPct.toFixed(1)}%)</span></div>`;
+  }).join('');
+}
+function renderLogBox(){
+  const box=document.getElementById('logBox');
+  if(!tradeLog.length){ box.innerHTML=`<p class="empty">No trades yet.</p>`; return; }
+  box.innerHTML = tradeLog.slice(0,15).map(l=>`<div class="logRow"><span>${l.text}</span><span class="t">${l.t}</span></div>`).join('');
+}
+function renderSummary(){
+  const holdVal=Object.entries(holdings).reduce((s,[sym,p])=>s+p.qty*prices[sym],0);
+  const totalCost=Object.values(holdings).reduce((s,p)=>s+p.costBasis,0);
+  const unrealized=holdVal-totalCost;
+  document.getElementById('cashVal').textContent=`$${cash.toFixed(2)}`;
+  document.getElementById('holdVal').textContent=`$${holdVal.toFixed(2)}`;
+  const pnlEl=document.getElementById('pnlVal');
+  pnlEl.textContent=`${unrealized>=0?'+':''}$${unrealized.toFixed(2)}`;
+  pnlEl.className='val '+(unrealized>=0?'up':'dn');
+}
+function renderPaperAll(){ renderMarket(); renderHoldings(); renderLogBox(); renderSummary(); }
+
+// ============ INIT ============
+(async function init(){
+  document.getElementById('ticker').innerHTML = Object.keys(DEMO).map(s=>`<option value="${s}">${s}</option>`).join('');
+  loadState();
+  initPrices();
+  await detectLive();
+  tickLiveClock();
+  runAdvisor();
+  renderPaperAll();
+  setInterval(tickPrices, 2000);
+  setInterval(pollLive, 10000);
+})();
+</script>
+</body>
+</html>
