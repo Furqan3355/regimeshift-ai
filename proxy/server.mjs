@@ -41,6 +41,9 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/" || url.pathname === "/index.html") {
       return send(200, await fs.readFile(new URL("./public/index.html", import.meta.url), "utf8"), "text/html; charset=utf-8");
     }
+    if (url.pathname === "/verdict.mjs") {
+      return send(200, await fs.readFile(new URL("./verdict.mjs", import.meta.url), "utf8"), "text/javascript; charset=utf-8");
+    }
     send(404, { error: "not found" });
   } catch (e) {
     send(502, { error: String(e.message || e) });

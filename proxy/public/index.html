@@ -214,6 +214,32 @@ function toggleAdv(){
   const open=p.classList.toggle('open');
   b.textContent=open?'Hide the technical details ▲':'Show the technical details ▾';
 }
+// ============ SHARED VERDICT MODULE (verdict.mjs, served by the proxy; DEMO/published page falls back to the legacy inline logic below) ============
+let VMOD=null, VTRIED=false;
+async function loadVerdict(){ if(VTRIED) return VMOD; VTRIED=true; try{ VMOD=await import('/verdict.mjs'); }catch{ VMOD=null; } return VMOD; }
+const VERDICT_TITLE={buy:t=>`Looks like a reasonable time to consider ${t}`, wait:t=>`Wait on ${t}`, skip:t=>`Stay away from ${t} for now`};
+function renderVerdict(ticker,d,r){
+  const title=(VERDICT_TITLE[r.verdict])(ticker)+(r.verdict==='buy'&&r.caution?' (with caution)':'');
+  const items=(r.entry?[`<b>Suggested entry: $${r.entry.price.toLocaleString()}</b> — ${r.entry.note}`]:[]).concat(r.reasons);
+  document.getElementById('heroBox').innerHTML=`
+    <div class="hero ${r.verdict}">
+      <p class="verdict">${title}</p>
+      <ul>${items.map(x=>`<li>${x}</li>`).join('')}</ul>
+      ${r.verdict==='buy' ? `<div class="action" id="actionBox">
+        <button class="buyBtn" onclick="realConnect('${ticker}')" id="connectBtn">Connect wallet</button>
+        <p class="actionNote" id="walletNote">Uses your own MetaMask / Trust Wallet / Binance Wallet. Or skip straight to <a href="#" onclick="showTab('paper');return false">Paper Trading</a> to practice without a wallet.</p>
+      </div>` : ''}
+    </div>`;
+  const nl=r.news.level;
+  document.getElementById('advLines').innerHTML=`
+    <div class="line"><span class="k">Regime</span><span>${r.regime} · ${Math.round(r.conf*1000)/10}% confidence</span></div>
+    <div class="line"><span class="k">Spread</span><span>${r.spreadPct}% ${r.anomalous?'(anomalous)':''}</span></div>
+    <div class="line"><span class="k">News check</span><span>${nl}${r.news.trigger?` (“${r.news.trigger}”)`:''}</span></div>
+    <div class="line"><span class="k">Position size</span><span>${Math.round(r.size*100)}% of a normal position</span></div>
+    <div class="line"><span class="k">Trend / RSI</span><span>${d.ta.trend} · RSI ${d.ta.rsi} · 20d avg $${d.ta.sma}</span></div>
+    <div class="line"><span class="k">Verdict</span><span>${r.verdict}${r.triggers.length?' · '+r.triggers.map(t=>t.code).join(', '):''}</span></div>`;
+  document.getElementById('newsLines').innerHTML=`<b>Recent headlines:</b> ${d.news}`+(r.news.headline?`<br><b>Triggered by:</b> ${r.news.headline}`:'');
+}
 async function runAdvisor(){
   const ticker=document.getElementById('ticker').value;
   if(LIVE.on) document.getElementById('heroBox').innerHTML=`<div class="hero wait"><p class="verdict">Loading live data for ${ticker}…</p></div>`;
@@ -223,6 +249,8 @@ async function runAdvisor(){
     document.getElementById('heroBox').innerHTML=`<div class="hero wait"><p class="verdict">No usable live data for ${ticker}</p><p class="why">The API returned no price, or not enough candle history, for this ticker right now. Try another ticker.</p></div>`;
     return;
   }
+  const V=await loadVerdict();
+  if(V){ renderVerdict(ticker,d,V.decide({ticker,...d})); return; }
   const spreadPct=Math.round(((d.onp-d.refp)/d.refp)*10000)/100;
   const anomalous=isAnomalous(d.onp,d.refp);
   const reg=predict([d.ret,d.vol]);
