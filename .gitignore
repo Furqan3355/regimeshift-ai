@@ -22,3 +22,5 @@ real_features.json
 # OS junk
 .DS_Store
 Thumbs.db
+output.txt
+task1.zip
