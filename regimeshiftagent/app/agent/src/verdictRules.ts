@@ -114,6 +114,7 @@ export function applyVerdictRules(
     );
     reasons.push(ev.entry_reason);
     if (news.level === "caution") reasons.push(`Cautious headline ("${news.trigger}"): size halved. ${news.headline}`);
+    else if (!newsText || !String(newsText).trim()) reasons.push("News not checked: no news available for this ticker");
     else reasons.push("News check: clear");
     reasons.push(`Suggested size: ${Math.round(size * 100)}% of a normal position`);
   }
