@@ -8,7 +8,7 @@ Built for **BNB Hack, Tokenized Stocks Edition (Main Track)**.
 
 - Demo video: `[TODO: link]`
 - Agent on BNB Agent Studio: `[TODO: agent link / ERC-8004 agent id]`
-- Real on-chain demo swap (small, manual): `[TODO: BscScan tx hash]`
+- Real on-chain demo swap (small, manual): `https://testnet.bscscan.com/tx/0x9ce54dcc875d7fabb43ef2b47d871c534aa0178400233ace4455608cb0258bc8`
 - DX report: `[TODO: link]`
 
 ---
