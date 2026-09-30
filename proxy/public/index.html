@@ -78,6 +78,7 @@ code{font-family:ui-monospace,monospace;font-size:11px;background:var(--midbg);p
 .logRow .t{color:var(--mut)}
 .empty{font-size:13px;color:var(--mut);text-align:center;padding:18px}
 .resetBtn{font-size:12px;color:var(--mut);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0}
+.pSwitch{display:flex;gap:8px;margin:10px 0 14px}.pSwitch .tbtn.on{outline:2px solid var(--calm)}
 </style>
 </head>
 <body>
@@ -107,6 +108,8 @@ code{font-family:ui-monospace,monospace;font-size:11px;background:var(--midbg);p
 <!-- ===== PAPER TRADING PAGE ===== -->
 <div class="page" id="pagePaper">
   <h1>Practice trading with fake money first</h1>
+  <div class="pSwitch"><button class="tbtn on" id="swMine" onclick="setPortfolio('mine')">My portfolio</button><button class="tbtn" id="swBot" onclick="setPortfolio('bot')">Bot portfolio (autonomous)</button></div>
+  <div id="myPortfolio">
   <div class="summary">
     <div class="sumCard"><p class="lbl">Cash</p><p class="val" id="cashVal">$0</p></div>
     <div class="sumCard"><p class="lbl">Holdings value</p><p class="val" id="holdVal">$0</p></div>
@@ -116,6 +119,19 @@ code{font-family:ui-monospace,monospace;font-size:11px;background:var(--midbg);p
   <div class="holdings"><h2>Your positions</h2><div id="holdingsBox"></div></div>
   <div class="log"><h2>Trade history</h2><div id="logBox"></div></div>
   <button class="resetBtn" onclick="resetPortfolio()">Reset account to $10,000</button>
+  </div>
+  <div id="botPortfolio" style="display:none">
+    <div class="summary">
+      <div class="sumCard"><p class="lbl">Bot equity</p><p class="val" id="botEq">-</p></div>
+      <div class="sumCard"><p class="lbl">Cash</p><p class="val" id="botCash">-</p></div>
+      <div class="sumCard"><p class="lbl">P&amp;L vs start</p><p class="val" id="botPnl">-</p></div>
+    </div>
+    <p class="meta" id="botStatus" style="margin:6px 0 12px"></p>
+    <div class="holdings"><h2>Bot positions</h2><div id="botPos"></div></div>
+    <div class="log"><h2>Why the bot acted (reasoned log)</h2><div id="botLog"></div></div>
+    <div class="log"><h2>Closed trades</h2><div id="botClosed"></div></div>
+    <p class="foot">The bot runs on the server every 5 minutes, even with this page closed. Data is real (on-chain prices, live analysis, news); trades are paper only. It uses the same verdict rules as the Advisor, so it can never be more aggressive than the Advisor. Short-term P&amp;L is noise, not a track record.</p>
+  </div>
   <p class="foot">Same portfolio as the "Buy" button on the Advisor tab — one shared paper account. In LIVE mode prices are the real on-chain token prices, refreshed every 10 s; in DEMO mode they random-walk. No wallet needed here. When you're ready to trade for real, use "Connect wallet" on the Advisor tab instead.</p>
 </div>
 </div>
@@ -409,6 +425,35 @@ function renderSummary(){
   pnlEl.className='val '+(unrealized>=0?'up':'dn');
 }
 function renderPaperAll(){ renderMarket(); renderHoldings(); renderLogBox(); renderSummary(); }
+
+// ============ BOT PORTFOLIO (server-side autonomous paper bot) ============
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function setPortfolio(w){
+  document.getElementById('myPortfolio').style.display=w==='mine'?'':'none';
+  document.getElementById('botPortfolio').style.display=w==='bot'?'':'none';
+  document.getElementById('swMine').classList.toggle('on',w==='mine');
+  document.getElementById('swBot').classList.toggle('on',w==='bot');
+  if(w==='bot') pollBot();
+}
+const fmtT=ms=>ms?new Date(ms).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'-';
+async function pollBot(){
+  const st=document.getElementById('botStatus'); if(!st) return;
+  let b; try{ const r=await fetch('/api/bot',{cache:'no-store'}); if(!r.ok) throw 0; b=await r.json(); }
+  catch{ st.textContent='Bot is not available here (it runs on the local server, so the DEMO page cannot show it).'; return; }
+  const pnl=b.equity-b.startCash, up=pnl>=0;
+  document.getElementById('botEq').textContent='$'+b.equity.toFixed(2);
+  document.getElementById('botCash').textContent='$'+b.cash.toFixed(2);
+  const pe=document.getElementById('botPnl'); pe.textContent=(up?'+':'')+'$'+pnl.toFixed(2); pe.className='val '+(up?'up':'dn');
+  st.textContent=`Last scan: ${fmtT(b.lastTick)} · scans so far: ${b.ticks} · closed trades: ${b.closedCount} · learning: ${b.closedCount<20?'not yet (needs 20 closed trades)':'ready'}`;
+  document.getElementById('botPos').innerHTML = b.positions.length ? b.positions.map(p=>{const u=p.pnlPct>=0;
+    return `<div class="hRow"><span><b>${esc(p.ticker)}</b><span class="meta">${p.qty.toFixed(4)} units · in @ $${p.entry.toFixed(2)} · now $${p.price.toFixed(2)}</span></span>
+    <span style="color:${u?'var(--calm)':'var(--hot)'};font-weight:600">${u?'+':''}${p.pnlPct.toFixed(2)}%</span></div>`;}).join('') : '<p class="empty">No open positions. The bot only buys when every rule says buy.</p>';
+  const acts=b.log.filter(l=>l.kind!=='skip').slice(0,30);
+  document.getElementById('botLog').innerHTML = acts.length ? acts.map(l=>`<div class="logRow"><span>${esc(l.text)}</span><span class="t">${fmtT(l.t)}</span></div>`).join('') : '<p class="empty">No actions yet.</p>';
+  document.getElementById('botClosed').innerHTML = b.closed.length ? b.closed.slice().reverse().slice(0,15).map(c=>{const u=c.pnlPct>=0;
+    return `<div class="logRow"><span><b>${esc(c.ticker)}</b> ${u?'+':''}${c.pnlPct}% · ${esc(c.exitReason)}</span><span class="t">${fmtT(c.closedAt)}</span></div>`;}).join('') : '<p class="empty">No closed trades yet.</p>';
+}
+setInterval(()=>{ if(document.getElementById('pagePaper').classList.contains('active') && document.getElementById('botPortfolio').style.display!=='none') pollBot(); }, 15000);
 
 // ============ INIT ============
 (async function init(){
