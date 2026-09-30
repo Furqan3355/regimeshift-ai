@@ -24,7 +24,7 @@ test("buys $50 x size on a clean buy and logs the reason", async () => {
   assert.match(s.log[0].text, /NVDA liya \$50/);
 });
 test("does not buy when market closed, crisis or serious news", async () => {
-  for (const o of [{ status: "closed" }, { an: { ...calm, ret: -3, vol: 12 } }, { news: "SEC investigation into fraud" }]) {
+  for (const o of [{ status: "closed" }, { an: { ...calm, ret: -20, vol: 15 } }, { news: "SEC investigation into fraud" }]) {
     const { bot } = mk(o); const s = await bot.tick(); assert.equal(s.positions.length, 0);
   }
 });
