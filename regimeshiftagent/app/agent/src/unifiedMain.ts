@@ -215,6 +215,7 @@ export function buildRunWork(): RunWork {
           "this result clearly and concisely to the buyer in plain English. " +
           "Do NOT recompute, second-guess, or contradict any number in the " +
           "JSON -- treat it as ground truth. Do not invent data that isn't there. " +
+          "The verdict field (buy / wait / skip) and verdict_reasons are the FINAL decision; state them first and never soften a wait or skip into a buy. " +
           "If the computed result includes a news_instruction field, follow it -- call fetch_live_news before answering.",
         prompt: `Computed result:\n${JSON.stringify(pipelineResult, null, 2)}\n\nExplain this to the buyer.`,
         tools: { ...LLM_READ_TOOLS, ...LIVE_NEWS_TOOL },

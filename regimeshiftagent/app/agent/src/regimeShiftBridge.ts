@@ -44,6 +44,7 @@ import { TradeExecutor, type EvmTx } from "./tradeExecutor.js";
 import { getSnapshot } from "./snapshotStore.js";
 import { fetchCandles } from "./rwaData.js";
 import { computeTechnicalAnalysis } from "./technicalAnalysis.js";
+import { applyVerdictRules } from "./verdictRules.js";
 
 const GMM_PARAMS = gmmParamsJson as unknown as GmmParams;
 
@@ -110,11 +111,27 @@ export async function runRegimeShiftPipeline(req: RegimeShiftRequest): Promise<R
     req.maxSpreadPct ?? 1.0,
   );
 
+  // News (cached snapshot) is read FIRST because the verdict rules need it.
+  // Same rules as the dashboard (verdictRules.ts): they can only make the
+  // verdict more cautious, never more aggressive.
+  const snap = getSnapshot(req.ticker);
+  const finalVerdict = applyVerdictRules(evaluation, anomalous, snap?.snapshot.market_news?.summary ?? null);
+
   const result: Record<string, unknown> = {
     ticker: req.ticker,
     spread_pct: Math.round(spreadPct * 10000) / 10000,
     is_anomalous: anomalous,
     ...evaluation,
+    // Final answer (overrides the base gate's should_trade / size):
+    verdict: finalVerdict.verdict,
+    should_trade: finalVerdict.should_trade,
+    position_size_multiplier: finalVerdict.position_size_multiplier,
+    caution: finalVerdict.caution,
+    verdict_reasons: finalVerdict.reasons,
+    verdict_triggers: finalVerdict.triggers,
+    news_check: snap
+      ? { ...finalVerdict.news_check, source: snap.stale ? "cached (stale)" : "cached" }
+      : { ...finalVerdict.news_check, source: "none — news unverified" },
   };
 
   // Technical analysis: LIVE, not cached — cheap math from real candles.
@@ -127,11 +144,11 @@ export async function runRegimeShiftPipeline(req: RegimeShiftRequest): Promise<R
       const cfg = new BinanceConfig();
       const candles = await fetchCandles(cfg, req.binanceChainId, req.tokenContractAddress);
       const ta = computeTechnicalAnalysis(candles);
-      if (!evaluation.should_trade) {
+      if (!finalVerdict.should_trade) {
         result.technical_analysis = {
           ...ta,
           suggested_entry_price: null,
-          entry_note: "No entry price suggested — the deterministic gate rejected this trade (see entry_reason / market_status above).",
+          entry_note: "No entry price suggested — the verdict is not buy (see verdict_reasons above).",
         };
       } else {
         result.technical_analysis = ta;
@@ -145,7 +162,6 @@ export async function runRegimeShiftPipeline(req: RegimeShiftRequest): Promise<R
   // for the LLM to refresh it live when the cache is stale or missing —
   // the hybrid fix for "don't trust old news blindly, but don't pay the
   // live-fetch cost on every single request either."
-  const snap = getSnapshot(req.ticker);
   if (snap) {
     result.market_news = snap.snapshot.market_news;
     result.snapshot_built_at = snap.snapshot.built_at;
@@ -163,7 +179,7 @@ export async function runRegimeShiftPipeline(req: RegimeShiftRequest): Promise<R
   // Trade dry-run is optional and makes real signed network calls -- only
   // run it when the buyer's request actually includes trade parameters, and
   // only when the deterministic gate above says the trade is worth pricing.
-  if (req.trade && evaluation.should_trade) {
+  if (req.trade && finalVerdict.should_trade) {
     try {
       const cfg = new BinanceConfig(); // reads BINANCE_API_KEY / BINANCE_API_SECRET from env
       const executor = new TradeExecutor(cfg);
@@ -181,8 +197,8 @@ export async function runRegimeShiftPipeline(req: RegimeShiftRequest): Promise<R
       // as data so the LLM (or the buyer, reading raw JSON) can see why.
       result.dry_run_error = err instanceof Error ? err.message : String(err);
     }
-  } else if (req.trade && !evaluation.should_trade) {
-    result.dry_run_skipped_reason = "Deterministic gate rejected this entry (see entry_reason / market_status)";
+  } else if (req.trade && !finalVerdict.should_trade) {
+    result.dry_run_skipped_reason = "Deterministic verdict is not \"buy\" (see verdict / verdict_reasons)";
   }
 
   return result;
