@@ -67,6 +67,7 @@ def collect_for_ticker(ingestion: DataIngestion, chain_id: str, contract_address
         bar="1d",
         limit=limit_candles,
     )
+    candles = sorted(candles, key=lambda c: int(c["timestamp"]))
     closes = [c["close"] for c in candles]
     if len(closes) < window + 2:
         return [], 0  # not enough history for even one rolling window

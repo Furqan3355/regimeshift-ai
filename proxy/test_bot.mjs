@@ -54,7 +54,7 @@ test("glitched price is never traded", async () => {
   assert.equal((await t.bot.tick()).positions.length, 0);
 });
 test("state persists to disk and reloads", async () => {
-  const fs = await import("node:fs/promises"); const p = "/tmp/bot_state_test.json"; await fs.rm(p, { force: true });
+  const fs = await import("node:fs/promises"); const p = (await import("node:os")).tmpdir() + "/bot_state_test.json"; await fs.rm(p, { force: true });
   const a = mk(); const h = { prices: async () => ({ prices: { NVDA: { onp: 118, refp: 118, marketStatus: "regular" } } }), analysis: async () => calm, news: async () => ({ news: null }) };
   const b1 = createBot({ handlers: h, tickers: ["NVDA"], statePath: p }); await b1.tick();
   const b2 = createBot({ handlers: h, tickers: ["NVDA"], statePath: p }); await b2.load();
