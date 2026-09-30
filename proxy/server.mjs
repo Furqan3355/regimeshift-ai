@@ -2,7 +2,7 @@
  * server.mjs — run with:   node server.mjs
  * Then open:               http://localhost:8787
  *
- * Needs env vars (set in the SAME terminal first):
+ * Needs these keys, either in D:\task1\.env (recommended) or as terminal env vars:
  *   BINANCE_API_KEY, BINANCE_API_SECRET   (required)
  *   FINNHUB_API_KEY                       (optional — enables the news headlines)
  *
@@ -14,6 +14,9 @@
 import http from "node:http";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+
+// Load D:\task1\.env (git-ignored) so keys are not typed every time. Real env vars still win.
+try { process.loadEnvFile(fileURLToPath(new URL("../.env", import.meta.url))); } catch { /* no .env: use terminal env vars */ }
 import { createHandlers } from "./lib.mjs";
 import { createBot } from "./bot.mjs";
 

@@ -2,11 +2,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { pointFor } from "./test_points.mjs";
 import { decide, classifyNews, isAnomalous, predictRegime, GMM } from "./verdict.mjs";
 
-// Regime test points. RE-PICK these after every retrain (they must fall inside each cluster).
-const CRISIS_IN = { ret: -20, vol: 15 };
-const DEFENSIVE_IN = { ret: -2.1, vol: 12.5 };
+// Regime test points are derived from the current model (see test_points.mjs), so retraining never breaks them.
+const CRISIS_IN = pointFor("Crisis");
+const DEFENSIVE_IN = pointFor("Defensive");
 
 // A clean, calm baseline that should be a plain BUY.
 const base = (o = {}) => ({

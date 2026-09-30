@@ -26,6 +26,25 @@ import urllib.parse
 from datetime import datetime, timezone
 
 
+def _load_dotenv():
+    """Load KEY=VALUE lines from <repo>/.env (git-ignored) without overriding real env vars."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    try:
+        with open(path, encoding="utf-8-sig") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+    except FileNotFoundError:
+        pass
+
+
+_load_dotenv()
+
+
+
 class BinanceAuthError(Exception):
     """Raised when API credentials are missing or invalid."""
     pass

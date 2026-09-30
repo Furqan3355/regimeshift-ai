@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createBot, mapStatus } from "./bot.mjs";
+import { pointFor } from "./test_points.mjs";
 
 const calm = { ret: 0.3, vol: 1.9, ta: { trend: "uptrend", rsi: 58, sma: 117.8, low: 114 } };
 function mk({ price = 118, status = "regular", news = null, an = calm, tickers = ["NVDA"], cfg = {} } = {}) {
@@ -24,7 +25,7 @@ test("buys $50 x size on a clean buy and logs the reason", async () => {
   assert.match(s.log[0].text, /NVDA liya \$50/);
 });
 test("does not buy when market closed, crisis or serious news", async () => {
-  for (const o of [{ status: "closed" }, { an: { ...calm, ret: -20, vol: 15 } }, { news: "SEC investigation into fraud" }]) {
+  for (const o of [{ status: "closed" }, { an: { ...calm, ...pointFor("Crisis") } }, { news: "SEC investigation into fraud" }]) {
     const { bot } = mk(o); const s = await bot.tick(); assert.equal(s.positions.length, 0);
   }
 });
