@@ -123,6 +123,11 @@ cd proxy
 node server.mjs                 # http://localhost:8787   (BOT=off disables the bot)
 node --test test_verdict.mjs test_bot.mjs
 
+# 2b. New dashboard (Next.js + Tailwind), with the proxy above still running
+cd ..\web
+npm install
+npm run dev                     # http://localhost:3000  (/api/* is forwarded to the proxy on :8787)
+
 # 3. Python tests
 cd ..
 python -m pytest tests/ -v

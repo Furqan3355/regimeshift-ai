@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f1f3f6;
+  --line: #e2e5ea;
+  --ink: #111418;
+  --ink-2: #4a525e;
+  --muted: #7d8694;
+  --accent: #a87b00;
+
+  --buy: #12805a;
+  --buy-soft: #e9f6f0;
+  --wait: #a65d05;
+  --wait-soft: #fcf3e6;
+  --skip: #b9382e;
+  --skip-soft: #fcedeb;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1014;
+    --surface: #14181e;
+    --surface-2: #1b2028;
+    --line: #262c36;
+    --ink: #e6e9ee;
+    --ink-2: #aab2be;
+    --muted: #747e8c;
+    --accent: #d9a62a;
+
+    --buy: #3fbf8f;
+    --buy-soft: rgb(63 191 143 / 0.1);
+    --wait: #e3a640;
+    --wait-soft: rgb(227 166 64 / 0.1);
+    --skip: #e57369;
+    --skip-soft: rgb(229 115 105 / 0.1);
+
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-buy: var(--buy);
+  --color-buy-soft: var(--buy-soft);
+  --color-wait: var(--wait);
+  --color-wait-soft: var(--wait-soft);
+  --color-skip: var(--skip);
+  --color-skip-soft: var(--skip-soft);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-spin {
+    animation: none;
+  }
+}

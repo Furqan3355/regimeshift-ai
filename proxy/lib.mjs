@@ -130,8 +130,10 @@ export function createHandlers({ env, fetchImpl = fetch, now = () => Date.now() 
           binanceChainId: t.binanceChainId, tokenContractAddress: t.tokenContractAddress, bar: "1d", limit: 30,
         });
         // [open, high, low, close, volume, timestamp_ms, tradeCount] — sort by time so ordering never matters
-        const closes = raw.slice().sort((a, b) => Number(a[5]) - Number(b[5])).map((c) => Number(c[3]));
-        return { ticker, ...analyzeCloses(closes) };
+        const sorted = raw.slice().sort((a, b) => Number(a[5]) - Number(b[5]));
+        const closes = sorted.map((c) => Number(c[3]));
+        // history: the same daily closes, exposed read-only for the dashboard's price chart
+        return { ticker, ...analyzeCloses(closes), history: sorted.map((c) => ({ t: Number(c[5]), close: Number(c[3]) })) };
       });
     },
 
