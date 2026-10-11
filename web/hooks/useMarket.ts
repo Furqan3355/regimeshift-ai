@@ -10,8 +10,10 @@ const LIVE_POLL_MS = 10_000;
 const DEMO_TICK_MS = 2_000;
 
 export interface Market {
-  /** null while probing the proxy; true = real Binance data; false = DEMO. */
+  /** null while probing the proxy; true = a live price feed; false = DEMO. */
   live: boolean | null;
+  /** Which feed produced the live quotes. */
+  source: "binance" | "coingecko" | null;
   /** Current price per ticker. In LIVE mode a ticker missing from the RWA list has no entry. */
   prices: Record<string, number>;
   /** First price seen this session, for the "change since you opened" column. */
@@ -24,6 +26,7 @@ export interface Market {
 /** Auto-detects the local proxy; falls back to a random-walk DEMO market. */
 export function useMarket(): Market {
   const [live, setLive] = useState<boolean | null>(null);
+  const [source, setSource] = useState<"binance" | "coingecko" | null>(null);
   const [prices, setPrices] = useState<Record<string, number>>(demoPrices);
   const [startPrices, setStartPrices] = useState<Record<string, number>>(demoPrices);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
@@ -50,7 +53,7 @@ export function useMarket(): Market {
     api<PricesResponse>(PRICES_PATH)
       .then((j) => {
         if (cancelled) return;
-        if (j?.prices) { apply(j); setLive(true); } else setLive(false);
+        if (j?.prices) { apply(j); setSource(j.source ?? null); setLive(true); } else setLive(false);
       })
       .catch(() => { if (!cancelled) setLive(false); });
     return () => { cancelled = true; };
@@ -72,5 +75,5 @@ export function useMarket(): Market {
     return () => clearInterval(id);
   }, [live, apply]);
 
-  return { live, prices, startPrices, quotes, lastUpdate };
+  return { live, source, prices, startPrices, quotes, lastUpdate };
 }

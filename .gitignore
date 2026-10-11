@@ -12,6 +12,7 @@ __pycache__/
 
 # Node / TypeScript
 node_modules/
+.netlify/
 regimeshiftagent/**/node_modules/
 dist/
 *.tsbuildinfo

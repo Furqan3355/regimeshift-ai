@@ -1,0 +1,13 @@
+# Separate API host. The website calls this origin; keys stay here, never in the browser.
+[build]
+  publish = "status"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = true

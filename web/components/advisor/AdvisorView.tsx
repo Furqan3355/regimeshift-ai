@@ -37,7 +37,7 @@ export function AdvisorView({
   return (
     <div className="space-y-4">
       <h1 className="sr-only">Advisor</h1>
-      <Toolbar end={<LiveBadge live={market.live} lastUpdate={market.lastUpdate} />}>
+      <Toolbar end={<LiveBadge live={market.live} lastUpdate={market.lastUpdate} source={market.source} />}>
         <TickerSelect tickers={TICKERS} value={ticker} onChange={setTicker} />
         <p className="text-sm">
           <span className="text-muted">Price</span>{" "}

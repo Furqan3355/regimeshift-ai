@@ -84,8 +84,8 @@ export function MyPortfolio({ market, portfolio: p }: { market: Market; portfoli
       </div>
 
       <Footnote>
-        Saved in this browser only, and shared with the Advisor&apos;s PancakeSwap button. LIVE prices are real on-chain token
-        prices refreshed every 10 s; DEMO prices random-walk.
+        Saved in this browser only, and shared with the Advisor&apos;s PancakeSwap button. LIVE prices refresh every 10 s.
+        DEMO prices random-walk.
       </Footnote>
     </div>
   );

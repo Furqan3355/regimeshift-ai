@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { Dot } from "@/components/ui/Badge";
 
-/** LIVE = real Binance data through the local proxy; DEMO = illustrative simulated numbers. */
-export function LiveBadge({ live, lastUpdate }: { live: boolean | null; lastUpdate: number }) {
+/** LIVE = a reachable price feed; DEMO = illustrative simulated numbers. */
+export function LiveBadge({ live, lastUpdate, source }: { live: boolean | null; lastUpdate: number; source?: "binance" | "coingecko" | null }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!live) return;
@@ -24,7 +24,7 @@ export function LiveBadge({ live, lastUpdate }: { live: boolean | null; lastUpda
   }
   const secs = Math.max(0, Math.round((now - lastUpdate) / 1000));
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-ink-2" title="Real prices from the Binance RWA API via the local proxy.">
+    <span className="inline-flex items-center gap-1.5 text-xs text-ink-2" title={source === "coingecko" ? "Ondo tokenized-stock prices from CoinGecko." : "Real prices from the Binance RWA API via the proxy."}>
       <Dot tone="buy" /> <b className="font-semibold text-buy">LIVE</b> · updated {secs < 2 ? "just now" : `${secs}s ago`}
     </span>
   );
