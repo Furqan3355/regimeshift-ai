@@ -7,7 +7,7 @@ import type { TickerData, Verdict } from "@/lib/types";
 
 /** Secondary information, collapsed by default so the answer and charts come first. */
 export function AdvisorDetails({ data: d, verdict: r }: { data: TickerData; verdict: Verdict }) {
-  const headlines = d.news.split("|").map((s) => s.trim()).filter(Boolean);
+  const headlines = (d.news ?? "").split("|").map((s) => s.trim()).filter(Boolean);
 
   return (
     <Card>
@@ -70,7 +70,9 @@ export function AdvisorDetails({ data: d, verdict: r }: { data: TickerData; verd
             })}
           </ul>
         ) : (
-          <p className="text-sm text-muted">No recent headlines available.</p>
+          <p className="text-sm text-muted">
+            {d.news === null ? "News unavailable (FINNHUB_API_KEY not set on the proxy, or the request failed), so the news check was not verified." : "No recent headlines."}
+          </p>
         )}
       </Disclosure>
     </Card>

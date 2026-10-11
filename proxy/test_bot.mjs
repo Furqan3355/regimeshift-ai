@@ -5,9 +5,9 @@ import { pointFor } from "./test_points.mjs";
 
 const calm = { ret: 0.3, vol: 1.9, ta: { trend: "uptrend", rsi: 58, sma: 117.8, low: 114 } };
 function mk({ price = 118, status = "regular", news = null, an = calm, tickers = ["NVDA"], cfg = {} } = {}) {
-  const env = { price, status, news, an };
+  const env = { price, status, news, an, ref: null };
   const handlers = {
-    prices: async () => ({ prices: Object.fromEntries(tickers.map((t) => [t, { onp: env.price, refp: env.price, marketStatus: env.status }])) }),
+    prices: async () => ({ prices: Object.fromEntries(tickers.map((t) => [t, { onp: env.price, refp: env.ref ?? env.price, marketStatus: env.status }])) }),
     analysis: async () => env.an,
     news: async () => ({ news: env.news }),
   };
@@ -60,4 +60,29 @@ test("state persists to disk and reloads", async () => {
   const b1 = createBot({ handlers: h, tickers: ["NVDA"], statePath: p }); await b1.tick();
   const b2 = createBot({ handlers: h, tickers: ["NVDA"], statePath: p }); await b2.load();
   assert.equal(Object.keys(b2.state.positions).length, 1); assert.equal(b2.state.cash, 9950);
+});
+
+test("does NOT chase: buy verdict but price far above the suggested entry -> waits, buys once price pulls back", async () => {
+  const ext = { ...calm, ta: { ...calm.ta, sma: 117.8 } };
+  const t = mk({ price: 125, an: ext });                    // 6% above its 20-day average
+  let s = await t.bot.tick(); assert.equal(s.positions.length, 0);
+  assert.match(s.log[0].text, /waiting for a pullback to ~\$117\.8/);
+  await t.bot.tick(); assert.equal(t.bot.snapshot().log.filter((l) => /pullback/.test(l.text)).length, 1); // logged once, not every tick
+  t.env.price = 118;                                         // back near the 20-day average
+  s = await t.bot.tick(); assert.equal(s.positions.length, 1);
+  assert.equal(t.bot.state.positions.NVDA.features.entryTarget, 118); // near its average, the Advisor's entry is simply the current price
+});
+
+test("a 3x price glitch (not a 'round' ratio the detector knows) never triggers a fake take-profit", async () => {
+  const t = mk(); await t.bot.tick();
+  t.env.price = 118 * 3; t.env.ref = 118;                    // reference still 118, on-chain says 354
+  const s = await t.bot.tick(); assert.equal(s.positions.length, 1); assert.equal(s.closed.length, 0);
+  assert.match(s.log[0].text, /too large to trust/);
+});
+
+test("false-positive headline does not block a buy; unavailable news is labelled, not 'clear'", async () => {
+  let t = mk({ news: "Nvidia opens new mission control center" }); let s = await t.bot.tick();
+  assert.equal(s.cash, 9950);                                // full $50, not halved
+  t = mk({ news: null }); s = await t.bot.tick();
+  assert.equal(s.positions.length, 1); assert.match(s.log[0].text, /unavailable/i); assert.doesNotMatch(s.log[0].text, /News check: clear/);
 });

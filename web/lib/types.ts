@@ -1,7 +1,7 @@
 export type MarketStatus = "regular" | "offhours" | "closed";
 export type VerdictKind = "buy" | "wait" | "skip";
 export type Regime = "Risk-On" | "Defensive" | "Crisis";
-export type NewsLevel = "clear" | "caution" | "serious";
+export type NewsLevel = "clear" | "caution" | "serious" | "unavailable";
 
 export interface Technicals {
   trend: string;
@@ -19,8 +19,8 @@ export interface TickerData {
   refp: number;
   mkt: MarketStatus;
   ta: Technicals;
-  /** Headlines joined by " | ". Empty when there are none. */
-  news: string;
+  /** Headlines joined by " | ". "" = checked, none found. null = news could not be fetched (unverified). */
+  news: string | null;
 }
 
 export interface NewsCheck {

@@ -10,7 +10,9 @@ import * as V from "./src/verdictRules.js";
 const P = gmmParamsJson as unknown as GmmParams;
 let seed = 12345; const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
 const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];
-const NEWS = [null, "Nvidia demand remains strong", "Sales miss estimates | Stock steady", "SEC investigation into fraud", "Growth slows in key markets", "Company halts trading", "Record profit, upgrade"];
+const NEWS = [null, "Nvidia demand remains strong", "Sales miss estimates | Stock steady", "SEC investigation into fraud", "Growth slows in key markets", "Company halts trading", "Record profit, upgrade",
+  "Nvidia opens new mission control center", "Missile strike lifts defense stocks", "Analyst sees pressure easing, raises target",
+  "Apple default settings change in iOS", "Intel sues rival over patent", "Company defaulted on bond payment", "Margins under pressure"];
 const MKT = ["regular", "offhours", "closed", "weird"];
 const PRICES: Array<[number, number]> = [[118.96, 118.96], [119.9, 118.96], [123, 118.96], [1189.6, 118.96], [59.48, 118.96], [118.0, 118.96]];
 
