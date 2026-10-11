@@ -79,3 +79,33 @@ test("CoinGecko history feeds analysis when Binance is blocked", async () => {
   assert.equal(typeof out.ta.rsi, "number");
   assert.equal(typeof out.ret, "number");
 });
+
+test("news returns article links and still joins headlines for the verdict", async () => {
+  const h = createHandlers({
+    env: { FINNHUB_API_KEY: "k" },
+    now: () => Date.parse("2026-10-11T12:00:00Z"),
+    fetchImpl: async () => json([
+      { headline: "  TSMC reports  ", url: "https://news.example/tsmc" },
+      { headline: "Skip me", url: "javascript:alert(1)" },
+      { headline: "", url: "https://news.example/empty" },
+      { headline: "No url story", url: "" },
+      { headline: "Third", url: "http://news.example/third" },
+      { headline: "Sixth is dropped", url: "https://news.example/sixth" },
+    ]),
+  });
+  const out = await h.news("NVDA");
+  assert.equal(out.news, "TSMC reports | Skip me | No url story | Third");
+  assert.deepEqual(out.articles, [
+    { headline: "TSMC reports", url: "https://news.example/tsmc" },
+    { headline: "Skip me", url: null },
+    { headline: "No url story", url: null },
+    { headline: "Third", url: "http://news.example/third" },
+  ]);
+});
+
+test("news without a Finnhub key does not invent links", async () => {
+  const h = createHandlers({ env: {}, now: () => 0, fetchImpl: async () => { throw new Error("should not fetch"); } });
+  const out = await h.news("NVDA");
+  assert.equal(out.news, null);
+  assert.equal(out.articles, undefined);
+});

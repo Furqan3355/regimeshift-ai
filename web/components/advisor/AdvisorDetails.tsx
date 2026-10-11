@@ -3,11 +3,27 @@ import { Card } from "@/components/ui/Card";
 import { Disclosure } from "@/components/ui/Disclosure";
 import { KeyValue } from "@/components/ui/KeyValue";
 import { capitalize, cn, signedPct, tidy, usd } from "@/lib/format";
-import type { TickerData, Verdict } from "@/lib/types";
+import type { NewsArticle, TickerData, Verdict } from "@/lib/types";
+
+/** http(s) only. A bad URL stays plain text instead of becoming a link. */
+function articleHref(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function headlineItems(d: TickerData): NewsArticle[] {
+  if (d.articles?.length) return d.articles.filter((a) => a.headline);
+  return d.news.split("|").map((s) => s.trim()).filter(Boolean).map((headline) => ({ headline, url: null }));
+}
 
 /** Secondary information, collapsed by default so the answer and charts come first. */
 export function AdvisorDetails({ data: d, verdict: r }: { data: TickerData; verdict: Verdict }) {
-  const headlines = d.news.split("|").map((s) => s.trim()).filter(Boolean);
+  const headlines = headlineItems(d);
 
   return (
     <Card>
@@ -59,12 +75,19 @@ export function AdvisorDetails({ data: d, verdict: r }: { data: TickerData; verd
       <Disclosure title="Headlines" meta={headlines.length || "none"} defaultOpen={headlines.length > 0}>
         {headlines.length ? (
           <ul className="space-y-1.5">
-            {headlines.map((h, i) => {
-              const hit = h === r.news.headline;
+            {headlines.map((a, i) => {
+              const hit = a.headline === r.news.headline;
+              const href = articleHref(a.url);
               return (
-                <li key={i} title={h} className={cn("line-clamp-2 text-sm", hit ? "text-ink" : "text-ink-2")}>
+                <li key={i} title={a.headline} className={cn("line-clamp-2 text-sm", hit ? "text-ink" : "text-ink-2")}>
                   {hit && <Badge tone={r.news.level === "serious" ? "skip" : "wait"} className="mr-1.5">rule</Badge>}
-                  {h}
+                  {href ? (
+                    <a href={href} target="_blank" rel="noopener noreferrer" className="underline decoration-line underline-offset-2 hover:text-ink">
+                      {a.headline}
+                    </a>
+                  ) : (
+                    a.headline
+                  )}
                 </li>
               );
             })}

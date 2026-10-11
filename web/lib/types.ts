@@ -21,6 +21,8 @@ export interface TickerData {
   ta: Technicals;
   /** Headlines joined by " | ". Empty when there are none. */
   news: string;
+  /** Same headlines with article URLs when the proxy has them. Demo rows omit this. */
+  articles?: NewsArticle[];
 }
 
 export interface NewsCheck {
@@ -83,9 +85,15 @@ export interface AnalysisResponse {
   ta: { trend: string; rsi: number | null; sma: number | null; low: number; high: number };
 }
 
+export interface NewsArticle {
+  headline: string;
+  url: string | null;
+}
+
 export interface NewsResponse {
   ticker: string;
   news: string | null;
+  articles?: NewsArticle[];
   note?: string;
 }
 

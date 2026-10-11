@@ -60,6 +60,7 @@ export function useAdvice(ticker: string, market: Market): Advice {
           ret: a.value.ret, vol: a.value.vol, onp: q.onp, refp: q.refp, mkt: mapStatus(q.marketStatus),
           ta: { trend: ta.trend, rsi: ta.rsi ?? "n/a", sma: ta.sma, low: ta.low, high: ta.high },
           news: n.news ?? "",
+          articles: n.articles ?? [],
         },
         history: a.value.history?.length ? a.value.history : null,
       };
