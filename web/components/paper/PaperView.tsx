@@ -19,7 +19,7 @@ export function PaperView({ active, market, portfolio }: { active: boolean; mark
   return (
     <div className="space-y-4">
       <h1 className="sr-only">Paper trading</h1>
-      <Toolbar end={<LiveBadge live={market.live} lastUpdate={market.lastUpdate} />}>
+      <Toolbar end={<LiveBadge live={market.live} lastUpdate={market.lastUpdate} source={market.source} />}>
         <Segmented<Who>
           value={who}
           onChange={setWho}

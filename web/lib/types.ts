@@ -64,6 +64,7 @@ export interface Quote {
 
 export interface PricesResponse {
   fetchedAt: number;
+  source?: "binance" | "coingecko";
   prices: Record<string, Quote>;
 }
 

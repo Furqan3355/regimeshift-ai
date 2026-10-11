@@ -17,8 +17,8 @@ export function AdvisorDetails({ data: d, verdict: r }: { data: TickerData; verd
         </ul>
         <p className="mt-3 text-xs leading-relaxed text-muted">
           Fixed, tested rules decide; no LLM makes the call. Every extra signal can only make the verdict more cautious.
-          The most severe rule wins and size is multiplied by every caution factor. LIVE uses real Binance RWA data via the
-          local proxy; DEMO uses built-in illustrative numbers.
+          The most severe rule wins and size is multiplied by every caution factor. LIVE uses a live tokenized-stock
+          feed. DEMO uses built-in illustrative numbers.
         </p>
       </Disclosure>
 

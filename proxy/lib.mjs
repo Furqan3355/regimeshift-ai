@@ -11,6 +11,7 @@
  */
 
 import { createHmac } from "node:crypto";
+import { fetchCoinGeckoPrices, fetchCoinGeckoSeries } from "./coingecko.mjs";
 
 const BASE = "https://web3.binance.com/build";
 const PREFIX = "/build"; // required in BOTH the URL and the signed path
@@ -104,37 +105,61 @@ export function createHandlers({ env, fetchImpl = fetch, now = () => Date.now() 
       return m;
     });
 
+  async function binancePrices(tickers) {
+    const m = await tokenMap();
+    const prices = {};
+    for (const tk of tickers) {
+      const t = m[tk];
+      if (!t) { prices[tk] = { error: "ticker not in RWA list" }; continue; }
+      const onp = Number(t.tokenPrice), refp = Number(t.referencePrice);
+      prices[tk] = {
+        onp, refp,
+        spreadPct: round(((onp - refp) / refp) * 100),
+        marketStatus: t.statusInfo?.marketStatus ?? "unknown",
+      };
+    }
+    return { fetchedAt: now(), source: "binance", prices };
+  }
+
+  async function binanceAnalysis(ticker) {
+    const m = await tokenMap();
+    const t = m[ticker];
+    if (!t) throw new Error("ticker not in RWA list");
+    const raw = await upstream("/api/v1/dex/market/candles", {
+      binanceChainId: t.binanceChainId, tokenContractAddress: t.tokenContractAddress, bar: "1d", limit: 30,
+    });
+    // [open, high, low, close, volume, timestamp_ms, tradeCount] — sort by time so ordering never matters
+    const sorted = raw.slice().sort((a, b) => Number(a[5]) - Number(b[5]));
+    const closes = sorted.map((c) => Number(c[3]));
+    return { ticker, source: "binance", ...analyzeCloses(closes), history: sorted.map((c) => ({ t: Number(c[5]), close: Number(c[3]) })) };
+  }
+
+  // Binance RWA is compliance-blocked from some hosts. CoinGecko still publishes the Ondo token price.
+  async function binanceOr(fallback, fn) {
+    if (!env.BINANCE_API_KEY || !env.BINANCE_API_SECRET) return fallback();
+    try {
+      return await fn();
+    } catch {
+      return fallback();
+    }
+  }
+
   return {
     async prices(tickers) {
-      const m = await tokenMap();
-      const prices = {};
-      for (const tk of tickers) {
-        const t = m[tk];
-        if (!t) { prices[tk] = { error: "ticker not in RWA list" }; continue; }
-        const onp = Number(t.tokenPrice), refp = Number(t.referencePrice);
-        prices[tk] = {
-          onp, refp,
-          spreadPct: round(((onp - refp) / refp) * 100),
-          marketStatus: t.statusInfo?.marketStatus ?? "unknown",
-        };
-      }
-      return { fetchedAt: now(), prices };
+      return binanceOr(
+        () => cached(`cg:${tickers.join(",")}`, 20_000, () => fetchCoinGeckoPrices(tickers, { fetchImpl, now })),
+        () => binancePrices(tickers),
+      );
     },
 
     async analysis(ticker) {
-      const m = await tokenMap();
-      const t = m[ticker];
-      if (!t) throw new Error("ticker not in RWA list");
-      return cached(`an:${ticker}`, 5 * 60_000, async () => {
-        const raw = await upstream("/api/v1/dex/market/candles", {
-          binanceChainId: t.binanceChainId, tokenContractAddress: t.tokenContractAddress, bar: "1d", limit: 30,
-        });
-        // [open, high, low, close, volume, timestamp_ms, tradeCount] — sort by time so ordering never matters
-        const sorted = raw.slice().sort((a, b) => Number(a[5]) - Number(b[5]));
-        const closes = sorted.map((c) => Number(c[3]));
-        // history: the same daily closes, exposed read-only for the dashboard's price chart
-        return { ticker, ...analyzeCloses(closes), history: sorted.map((c) => ({ t: Number(c[5]), close: Number(c[3]) })) };
-      });
+      return binanceOr(
+        () => cached(`cg-an:${ticker}`, 5 * 60_000, async () => {
+          const series = await fetchCoinGeckoSeries(ticker, { fetchImpl });
+          return { ticker, source: "coingecko", ...analyzeCloses(series.closes), history: series.history };
+        }),
+        () => cached(`an:${ticker}`, 5 * 60_000, () => binanceAnalysis(ticker)),
+      );
     },
 
     async news(ticker) {

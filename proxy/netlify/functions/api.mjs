@@ -31,12 +31,9 @@ export default async (req) => {
       ok: true,
       path,
       binance: Boolean(process.env.BINANCE_API_KEY && process.env.BINANCE_API_SECRET),
+      coingecko: true,
       news: Boolean(process.env.FINNHUB_API_KEY),
     });
-  }
-
-  if (!process.env.BINANCE_API_KEY || !process.env.BINANCE_API_SECRET) {
-    return json(503, { error: "BINANCE_API_KEY / BINANCE_API_SECRET are not set on the proxy" });
   }
 
   const h = createHandlers({ env: process.env });
