@@ -12,6 +12,6 @@ export const TONE = {
 } satisfies Record<Tone, Record<string, string>>;
 
 export const regimeTone = (r: Regime): Tone => (r === "Risk-On" ? "buy" : r === "Defensive" ? "wait" : "skip");
-export const newsTone = (n: NewsLevel): Tone => (n === "clear" ? "buy" : n === "caution" ? "wait" : "skip");
+export const newsTone = (n: NewsLevel): Tone => (n === "clear" ? "buy" : n === "caution" ? "wait" : n === "unavailable" ? "neutral" : "skip");
 export const pnlTone = (n: number): Tone => (n >= 0.005 ? "buy" : n <= -0.005 ? "skip" : "neutral");
 export const pnlText = (n: number) => TONE[pnlTone(n)].text;

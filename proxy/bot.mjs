@@ -16,6 +16,8 @@ export const DEFAULTS = {
   maxPositions: 5,
   exitOnWait: false,   // "wait" (e.g. market closed overnight) = hold; only "skip" forces an exit
   cooldownMs: 60 * 60_000, // no re-buy of a ticker for 1h after selling it (stops sell-then-rebuy churn)
+  entryTolerancePct: 0.5,  // only buy at/near the Advisor's suggested entry price (no chasing a run-up)
+  glitchSpreadPct: 20,     // on-chain vs reference gap this large = untrustworthy price: never exit on it
   maxLog: 300,
 };
 
@@ -40,6 +42,13 @@ export function createBot({ handlers, statePath = null, cfg: over = {}, now = ()
   const log = (kind, ticker, text, extra = {}) => {
     state.log.unshift({ t: now(), kind, ticker, text, ...extra });
     if (state.log.length > cfg.maxLog) state.log.length = cfg.maxLog;
+  };
+
+  // same text twice in a row for one ticker (e.g. "waiting for a pullback" every 5 min) is logged once
+  const logOnce = (kind, ticker, text, extra = {}) => {
+    const last = state.log.find((l) => l.ticker === ticker);
+    if (last && last.text === text) return;
+    log(kind, ticker, text, extra);
   };
 
   async function load() {
@@ -88,7 +97,11 @@ export function createBot({ handlers, statePath = null, cfg: over = {}, now = ()
     for (const [tk, p] of Object.entries(state.positions)) {
       const x = decisions[tk]; if (!x) continue;
       const price = x.px.onp, pnl = ((price - p.entry) / p.entry) * 100;
-      if (x.d.anomalous) continue; // never trade on a glitched price
+      if (x.d.anomalous || Math.abs(x.d.spreadPct) > cfg.glitchSpreadPct) {
+        // never trade on a glitched price: a 3x/6x data error would otherwise fake a take-profit
+        logOnce("skip", tk, `${tk}: on-chain vs reference price gap is too large to trust; holding the position`);
+        continue;
+      }
       if (pnl <= cfg.stopLossPct) sell(tk, price, `stop-loss (${r2(pnl)}% <= ${cfg.stopLossPct}%)`);
       else if (pnl >= cfg.takeProfitPct) sell(tk, price, `take-profit (${r2(pnl)}% >= ${cfg.takeProfitPct}%)`);
       else if (x.d.verdict === "skip") sell(tk, price, `verdict skip: ${x.d.reasons[0]}`);
@@ -102,6 +115,12 @@ export function createBot({ handlers, statePath = null, cfg: over = {}, now = ()
       if (lastSell && now() - lastSell.closedAt < cfg.cooldownMs) continue;
       const { d, px, an } = x;
       if (d.verdict !== "buy") continue;
+      // Follow the Advisor's entry suggestion: if it says "wait for a pullback to X", the bot waits too.
+      const target = d.entry?.price ?? px.onp;
+      if (px.onp > target * (1 + cfg.entryTolerancePct / 100)) {
+        logOnce("skip", tk, `${tk}: buy verdict, but waiting for a pullback to ~$${target} (not chasing)`);
+        continue;
+      }
       if (Object.keys(state.positions).length >= cfg.maxPositions) { log("skip", tk, `${tk}: buy verdict but max ${cfg.maxPositions} positions reached`); continue; }
       const usd = r2(cfg.baseBuyUsd * d.size);
       if (usd <= 0 || usd > state.cash) { log("skip", tk, `${tk}: not enough cash for $${usd}`); continue; }
@@ -109,7 +128,7 @@ export function createBot({ handlers, statePath = null, cfg: over = {}, now = ()
       state.cash -= usd;
       state.positions[tk] = {
         qty, entry: px.onp, openedAt: now(),
-        features: { regime: d.regime, conf: d.conf, spreadPct: d.spreadPct, rsi: an.ta?.rsi ?? null,
+        features: { regime: d.regime, conf: d.conf, spreadPct: d.spreadPct, entryTarget: target, rsi: an.ta?.rsi ?? null,
           extPct: an.ta?.sma ? r2(((px.onp - an.ta.sma) / an.ta.sma) * 100) : null, newsLevel: d.news.level, size: d.size },
       };
       log("buy", tk, `${tk} liya $${usd} @ $${px.onp}: ${d.reasons.join("; ")}`);

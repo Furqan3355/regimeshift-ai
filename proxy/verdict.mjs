@@ -51,22 +51,40 @@ export const OFFHOURS = {
 };
 
 // ---- news check: transparent keyword lists (deliberately crude; see README "Limitations") ----
+// MATCHING RULES (keep identical to regimeshiftagent/app/agent/src/verdictRules.ts):
+//  - whole words / phrases only, case-insensitive. A keyword may carry ONE plain suffix (s, es, ed, d):
+//    "halt" matches "halts"/"halted", "miss estimates" does not match "mission" or "missile".
+//  - phrases are used where a bare word is ambiguous ("under pressure", not "pressure";
+//    "default on", not "default"; "sued"/"sues" only halve the size because the company may be the one suing).
+//  - news === null/undefined means the headlines could not be fetched: level "unavailable"
+//    (never "clear"); it does not change size or verdict, but the reason says it was not verified.
 export const NEWS_SERIOUS = [
-  "fraud", "investigation", "probe", "lawsuit", "sues", "sued", "bankruptcy", "recall", "delist", "halt",
-  "guidance cut", "cuts guidance", "cuts forecast", "resign", "plunge", "subpoena", "sec charges", "accounting irregular",
-  "default", "class action",
+  "fraud", "fraudulent", "investigation", "probe", "lawsuit", "class action", "bankruptcy", "bankruptcies",
+  "recall", "delist", "halt", "guidance cut", "cuts guidance", "cuts forecast", "resign", "plunge",
+  "subpoena", "sec charges", "accounting irregularity", "accounting irregularities",
+  "default on", "defaults on", "defaulted on", "debt default",
 ];
 export const NEWS_CAUTION = [
-  "miss", "below estimates", "below expectations", "slows", "slowdown", "pressure", "concern", "delay",
-  "uncertainty", "downgrade", "warns", "scrutiny", "weak demand", "layoffs",
+  "sues", "sued",
+  "earnings miss", "revenue miss", "miss estimates", "misses estimates", "missed estimates",
+  "miss expectations", "misses expectations", "missed expectations", "below estimates", "below expectations",
+  "slows", "slowdown", "under pressure", "margin pressure", "pricing pressure", "pressure on",
+  "concern over", "concerns over", "concerns about", "raises concerns", "raised concerns",
+  "delay", "uncertainty", "downgrade", "warns", "scrutiny", "weak demand", "layoffs",
 ];
-const wordRe = (k) => new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i"); // word-start match ("miss" also hits "misses")
+const escRe = (k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const wordRe = (k) => new RegExp(`\\b${escRe(k)}(?:s|es|ed|d)?\\b`, "i");
 const SERIOUS_RE = NEWS_SERIOUS.map((k) => [k, wordRe(k)]);
 const CAUTION_RE = NEWS_CAUTION.map((k) => [k, wordRe(k)]);
 
-/** news: string of headlines separated by " | " (or array). Returns {level, trigger, headline}. */
+/**
+ * news: string of headlines separated by " | " (or an array), "" when none were found,
+ * null/undefined when the news source could not be reached. Returns {level, trigger, headline}
+ * with level = clear | caution | serious | unavailable.
+ */
 export function classifyNews(news) {
-  const heads = Array.isArray(news) ? news : String(news || "").split("|").map((s) => s.trim()).filter(Boolean);
+  if (news === null || news === undefined) return { level: "unavailable", trigger: null, headline: null };
+  const heads = Array.isArray(news) ? news : String(news).split("|").map((s) => s.trim()).filter(Boolean);
   let caution = null;
   for (const h of heads) {
     for (const [k, re] of SERIOUS_RE) if (re.test(h)) return { level: "serious", trigger: k, headline: h };
@@ -129,6 +147,7 @@ export function decide(d) {
     out.reasons.push(`Spread ${spreadPct}% (within +/-${MAX_SPREAD_PCT}%)`);
     if (d.mkt === "offhours") out.reasons.push("Outside regular hours: size cut to 30%");
     if (news.level === "caution") out.reasons.push(`Cautious headline ("${news.trigger}"): size halved. ${news.headline}`);
+    else if (news.level === "unavailable") out.reasons.push("News check: unavailable (headlines could not be fetched, so this was NOT verified)");
     else out.reasons.push("News check: clear");
     out.reasons.push(`Suggested size: ${Math.round(out.size * 100)}% of a normal position`);
   }

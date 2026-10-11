@@ -147,7 +147,8 @@ export function createHandlers({ env, fetchImpl = fetch, now = () => Date.now() 
         if (r.status !== 200) return { ticker, news: null, note: `Finnhub HTTP ${r.status}` };
         const arts = await r.json();
         const heads = arts.slice(0, 5).map((a) => a.headline).filter(Boolean);
-        return { ticker, news: heads.length ? heads.join(" | ") : null, note: heads.length ? undefined : "no recent headlines" };
+        // "" = news source answered and found nothing (checked, clear); null (above) = could not check (unavailable)
+        return { ticker, news: heads.join(" | "), note: heads.length ? undefined : "no recent headlines" };
       });
     },
   };

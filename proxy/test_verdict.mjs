@@ -81,7 +81,9 @@ test("most severe trigger wins (closed + crisis -> skip, both listed)", () => {
 });
 
 test("classifyNews: clear / empty / word-boundary safety", () => {
-  assert.equal(classifyNews("").level, "clear"); assert.equal(classifyNews(null).level, "clear");
+  assert.equal(classifyNews("").level, "clear"); // checked, nothing found
+  assert.equal(classifyNews(null).level, "unavailable"); // could not check: never reported as clear
+  assert.equal(classifyNews(undefined).level, "unavailable");
   assert.equal(classifyNews("Company hits new high").level, "clear");
   assert.equal(classifyNews("Price cuts boost sales").level, "clear"); // bare "cut" is deliberately NOT a keyword
   assert.equal(classifyNews("Company halts trading after outage").level, "serious"); // "halt" matches "halts"
@@ -96,4 +98,30 @@ test("GMM constants in verdict.mjs match gmm_params.json (catches drift after re
   const p = JSON.parse(fs.readFileSync(new URL("../gmm_params.json", import.meta.url), "utf8"));
   assert.deepEqual(GMM.weights, p.weights); assert.deepEqual(GMM.means, p.means); assert.deepEqual(GMM.covariances, p.covariances);
   assert.equal(predictRegime(0.3, 0.8).regime, "Risk-On");
+});
+
+test("classifyNews: known false positives are fixed", () => {
+  for (const h of [
+    "Nvidia opens new mission control center", "Missile strike lifts defense stocks", "Analyst sees pressure easing, raises target",
+    "Apple default settings change in iOS", "Missing piece: Microsoft closes deal", "Stock dismisses rumors, shares steady",
+  ]) assert.equal(classifyNews(h).level, "clear", h);
+});
+
+test("classifyNews: real bad news still caught (inflections, phrases)", () => {
+  assert.equal(classifyNews("Tesla halted by regulators").level, "serious");
+  assert.equal(classifyNews("Company defaulted on bond payment").level, "serious");
+  assert.equal(classifyNews("CEO resigns amid probe").level, "serious");
+  assert.equal(classifyNews("Chipmaker misses estimates on weak demand").level, "caution");
+  assert.equal(classifyNews("Margins under pressure as costs rise").level, "caution");
+});
+
+test("classifyNews: 'sues/sued' only halves size (we cannot tell who is suing)", () => {
+  const r = decide(base({ news: "Intel sues rival over patent, wins" }));
+  assert.equal(r.news.level, "caution"); assert.equal(r.verdict, "buy"); assert.equal(r.size, 0.5);
+});
+
+test("news unavailable: no size/verdict change, but the buy reason says NOT verified", () => {
+  const r = decide(base({ news: null }));
+  assert.equal(r.verdict, "buy"); assert.equal(r.size, 1); assert.equal(r.news.level, "unavailable");
+  assert.match(r.reasons.join(" "), /unavailable.*NOT verified/i); assert.doesNotMatch(r.reasons.join(" "), /News check: clear/);
 });
